@@ -1,6 +1,6 @@
 // frontend/js/config.js
 (function () {
-  const PROD_API = 'https://genuine-cat-production-7821.up.railway.app/api';
+  const PROD_API = 'https://restos-j54m.onrender.com/api';
   const DEV_API = 'http://localhost:5000/api';
 
   const isCapacitor =
@@ -18,7 +18,8 @@
 
   window.APP_CONFIG = {
     API_BASE: isLocalDevBrowser ? DEV_API : PROD_API,
-    WINDOWS_EXE_URL: 'https://github.com/SamiSahil/rsos/releases/download/v1.0/RestOS.Setup.1.0.0.exe',
+    WINDOWS_EXE_URL: 'https://github.com/SamiSahil/restos/releases/download/V1.0/RestOS.Setup.1.0.0.exe',
+    ANDROID_INSTALL_URL: "https://github.com/SamiSahil/restos/releases/download/V1.0/RestOS.apk",
   
     TAX_RATE: 0.05,
     CURRENCY_SYMBOL: '৳',

@@ -12,7 +12,7 @@ function createWindow() {
     webPreferences: { contextIsolation: true }
   });
 
-win.loadURL("https://restos.netlify.app");
+win.loadURL("https://rstos.netlify.app");
 }
 
 app.whenReady().then(createWindow);
