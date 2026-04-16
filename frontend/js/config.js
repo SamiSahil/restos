@@ -1,6 +1,6 @@
 // frontend/js/config.js
 (function () {
-  const PROD_API = 'https://genuine-cat-production-7821.up.railway.app/api';
+  const PROD_API = 'https://restos-j54m.onrender.com/api';
   const DEV_API = 'http://localhost:5000/api';
 
   const isCapacitor =
