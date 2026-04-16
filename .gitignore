@@ -1,0 +1,50 @@
+/Restaurant-management-OS.fig
+/packed
+p.py
+rsos_code_bundle.txt
+explain.txt
+
+
+# ========================
+# Node
+# ========================
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ========================
+# Backend secrets
+# ========================
+backend/.env
+
+# ========================
+# Desktop (Electron) build outputs
+# ========================
+desktop/dist/
+desktop/**/win-unpacked/
+
+# ========================
+# Mobile (Android) secrets & local config
+# ========================
+mobile/keystore/
+mobile/android/local.properties
+
+# (If you ever put passwords inside this file, ignore it too)
+# mobile/android/gradle.properties
+
+# ========================
+# Android build outputs / caches
+# ========================
+mobile/android/.gradle/
+mobile/android/**/build/
+mobile/android/**/*.iml
+mobile/android/.idea/
+
+# ========================
+# OS / Editor
+# ========================
+.DS_Store
+Thumbs.db
+.vscode/

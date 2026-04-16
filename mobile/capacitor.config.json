@@ -1,0 +1,13 @@
+{
+  "appId": "com.restos.app",
+  "appName": "RestOS",
+  "webDir": "www",
+  "server": {
+    "url": "https://rsos.netlify.app",
+    "cleartext": false,
+    "allowNavigation": [
+      "rsos.netlify.app",
+      "genuine-cat-production-7821.up.railway.app"
+    ]
+  }
+}

@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RestOS</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+
+  <!-- PWA -->
+  <meta name="theme-color" content="#E85D24" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RestaurantOS" />
+
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <link rel="mask-icon" href="./icons/safari-pinned-tab.svg" color="#E85D24" />
+  <meta name="msapplication-TileColor" content="#E85D24" />
+  <meta name="msapplication-config" content="./browserconfig.xml" />
+</head>
+<body class="app-loading public-theme">
+    <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- SIDEBAR OVERLAY -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- MAIN MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modalContent">
+      <div class="modal-header">
+        <h3 id="modalTitle">Modal</h3>
+        <button class="modal-close" onclick="App.closeModal()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer" id="modalFooter"></div>
+    </div>
+  </div>
+
+  <!-- PAYMENT MODAL -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal" style="max-width:600px">
+      <div class="modal-header">
+        <h3>Process Payment</h3>
+        <button class="modal-close" onclick="Billing.closePaymentModal && Billing.closePaymentModal()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="paymentModalBody"></div>
+      <div class="modal-footer" id="paymentModalFooter"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+<!-- APP LOADER (prevents sidebar flash before App.init completes) -->
+<div id="appLoader" class="app-loader">
+  <div class="app-loader-card">
+    <div class="app-loader-logo">Rs</div>
+    <div class="app-loader-title">RestOS</div>
+    <div class="app-loader-sub">Loading...</div>
+  </div>
+</div>
+
+<div id="app" class="public-mode">
+      <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">RsOs</div>
+        <div>
+          <h1><b>Rest</b>OS</h1>
+          <span>Management System</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-label public-only-nav">Public</div>
+
+        <a class="nav-item public-only-nav" data-page="home" href="#/home" onclick="event.preventDefault(); App.navigate('home')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M3 11l9-8 9 8"/>
+            <path d="M5 10v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V10"/>
+          </svg>
+          Public Menu
+        </a>
+
+        <div class="nav-section-label">Main</div>       
+        <!-- ✅ NEW: MY PROFILE -->
+        <a class="nav-item" data-page="profile" href="#/profile" onclick="event.preventDefault(); App.navigate('profile')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          My Profile
+        </a>
+        <a class="nav-item" data-page="dashboard" href="#/dashboard" onclick="event.preventDefault(); App.navigate('dashboard')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          Dashboard
+        </a>
+
+
+        <a class="nav-item" data-page="menu" href="#/menu" onclick="event.preventDefault(); App.navigate('menu')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M3 6h18M3 12h18M3 18h18" />
+          </svg>
+          Menu Engine
+        </a>
+
+        <a class="nav-item" data-page="floor" href="#/floor" onclick="event.preventDefault(); App.navigate('floor')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18M9 3v18" />
+          </svg>
+          Floor Map
+        </a>
+
+        <div class="nav-section-label">Operations</div>
+
+        <a class="nav-item" data-page="pos" href="#/pos" onclick="event.preventDefault(); App.navigate('pos')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
+          </svg>
+          Point of Sale
+        </a>
+
+        <a class="nav-item" data-page="kitchen" href="#/kitchen" onclick="event.preventDefault(); App.navigate('kitchen')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+          Order Tracker
+          <span class="nav-badge" id="pendingBadge">0</span>
+        </a>
+
+        <a class="nav-item" data-page="inventory" href="#/inventory" onclick="event.preventDefault(); App.navigate('inventory')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          Inventory
+        </a>
+
+        <div class="nav-section-label">Admin</div>
+
+        <a class="nav-item" data-page="staff" data-roles="admin,manager" href="#/staff" onclick="event.preventDefault(); App.navigate('staff')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+            <path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+          Staff
+        </a>
+
+        <a class="nav-item" data-page="analytics" href="#/analytics" onclick="event.preventDefault(); App.navigate('analytics')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 20V10M12 20V4M6 20v-6" />
+          </svg>
+          Analytics
+        </a>
+
+        <a class="nav-item" data-page="billing" href="#/billing" onclick="event.preventDefault(); App.navigate('billing')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+            <polyline points="14,2 14,8 20,8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10,9 9,9 8,9" />
+          </svg>
+          Billing
+        </a>
+
+        <a class="nav-item" data-page="sync" href="#/sync" onclick="event.preventDefault(); App.navigate('sync')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 12a9 9 0 11-2.64-6.36" />
+            <polyline points="21 3 21 9 15 9" />
+            <path d="M3 12a9 9 0 019-9" />
+            <polyline points="3 21 3 15 9 15" />
+          </svg>
+          Sync Center
+          <span class="nav-badge" id="syncQueueBadge" style="display:none">0</span>
+        </a>
+     <a class="nav-item" data-page="security" data-roles="admin,manager" href="#/security"
+   onclick="event.preventDefault(); App.navigate('security')">
+  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+    <path d="M12 3l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V7l8-4z"/>
+    <path d="M12 11v4"/>
+    <path d="M12 17h.01"/>
+  </svg>
+  Security Logs
+</a>
+
+
+      </nav>
+      <div class="sidebar-footer" id="sidebarFooter"></div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <!-- TOPBAR -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="App.toggleSidebar()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M3 12h18M3 6h18M3 18h18" />
+            </svg>
+          </button>
+          <div>
+            <h2 id="pageTitle">RestaurantOS</h2>
+            <div class="breadcrumb" id="pageBreadcrumb">Explore menu & place your order</div>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div id="staffAuthInfo"></div>
+          <span style="font-size:0.78rem;color:var(--text-muted)" id="currentDateTime"></span>
+
+          <button class="btn-icon" onclick="App.showNotifications()" title="Notifications" style="position:relative" id="notificationBtn">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 01-3.46 0" />
+            </svg>
+            <span id="notificationCountBadge" style="
+              position:absolute;
+              top:-4px;
+              right:-4px;
+              min-width:18px;
+              height:18px;
+              border-radius:999px;
+              background:var(--accent);
+              color:#fff;
+              font-size:0.68rem;
+              font-weight:700;
+              display:none;
+              align-items:center;
+              justify-content:center;
+              padding:0 5px;
+              box-shadow:0 4px 14px rgba(232,93,36,0.35);
+            ">0</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- PAGE CONTAINER -->
+      <div class="page-container">
+        <!-- PUBLIC HOME -->
+        <div class="page-view active" id="page-home"></div>
+        <div class="page-view" id="page-profile"></div>
+        <!-- DASHBOARD -->
+        <div class="page-view" id="page-dashboard">
+          <div class="stats-grid" id="dashboardStats"></div>
+
+          <div class="charts-grid" style="gap: 24px;">
+            <div class="card premium-card">
+              <div class="premium-card-header">
+                <div class="premium-title-wrap">
+                  <div class="premium-icon-box">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a4 4 0 01-4 4H8a4 4 0 01-4-4V4z"/></svg>
+                  </div>
+                  <div>
+                    <div class="card-title" id="dashboardRevenueTitle">This Week</div>
+                    <div class="card-subtitle" id="dashboardRevenueSubtitle">Daily revenue for selected week</div>
+                  </div>
+                  <div id="dashboardRevenueControls"></div>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap"><canvas id="revenueChart" height="230"></canvas></div>
+            </div>
+
+            <div class="card premium-card" style="display: flex; flex-direction: column;">
+              <div class="premium-card-header">
+                <div class="premium-title-wrap">
+                  <div class="premium-icon-box" style="background: var(--purple-bg); color: var(--purple);">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+                  </div>
+                  <div class="card-title">Recent Orders</div>
+                </div>
+                <button class="btn btn-secondary btn-sm premium-btn" onclick="App.navigate('kitchen')">View All</button>
+              </div>
+              <div class="recent-orders-list" id="recentOrdersList" style="max-height: 380px; padding-right: 4px;"></div>
+            </div>
+          </div>
+
+          <div class="card premium-card" style="margin-top: 24px;">
+            <div class="premium-card-header" style="border-bottom: none; padding-bottom: 0;">
+              <div class="premium-title-wrap">
+                <div class="premium-icon-box" style="background: var(--success-bg); color: var(--success);">
+                  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                </div>
+                <div>
+                  <div class="card-title">Sales by Category</div>
+                  <div class="card-subtitle">Distribution of sold items</div>
+                </div>
+              </div>
+            </div>
+            <div class="pie-chart-wrap" style="margin-top: -10px;"><canvas id="categoryPieChart" height="260"></canvas></div>
+          </div>
+        </div>
+
+        <!-- MENU -->
+        <div class="page-view" id="page-menu">
+          <div class="filters-bar">
+            <div class="search-input">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input type="text" placeholder="Search menu items..." id="menuSearchInput" oninput="MenuEngine.filter()">
+            </div>
+
+            <div class="filter-chips" id="menuFilterChips"></div>
+
+            <button class="btn btn-primary" onclick="MenuEngine.openAddModal()">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add Item
+            </button>
+          </div>
+
+          <div class="menu-grid" id="menuGrid"></div>
+        </div>
+
+        <!-- FLOOR -->
+        <div class="page-view" id="page-floor">
+          <div class="filters-bar" style="justify-content:space-between;align-items:center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px; margin-bottom: 24px;">
+            <div class="premium-legend">
+              <div class="legend-pill"><div class="legend-glow" style="background:var(--success); box-shadow: 0 0 10px var(--success);"></div> Available</div>
+              <div class="legend-pill"><div class="legend-glow" style="background:var(--accent); box-shadow: 0 0 10px var(--accent);"></div> Occupied</div>
+              <div class="legend-pill"><div class="legend-glow" style="background:var(--warning); box-shadow: 0 0 10px var(--warning);"></div> Reserved</div>
+            </div>
+
+            <button class="btn btn-primary premium-btn-solid" onclick="FloorMap.openAddModal()">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add Table
+            </button>
+          </div>
+
+          <div id="floorGridContainer" style="display: flex; flex-direction: column; gap: 32px;"></div>
+        </div>
+
+        <!-- POS -->
+        <div class="page-view" id="page-pos">
+          <div class="pos-layout">
+            <div class="pos-menu-section">
+              <div class="filters-bar" style="margin-bottom:14px">
+                <div class="search-input">
+                  <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                  </svg>
+                  <input type="text" placeholder="Search items..." id="posSearchInput" oninput="POS.filterItems()">
+                </div>
+                <div class="filter-chips" id="posFilterChips"></div>
+              </div>
+              <div class="pos-menu-items" id="posMenuItems"></div>
+            </div>
+
+            <div class="pos-cart-section">
+              <div class="pos-cart-header">
+                <h3>Current Order</h3>
+                <div>
+                  <select class="form-select" id="posTableSelect" style="padding:6px 30px 6px 10px;font-size:0.8rem;width:auto">
+                    <option value="">Select Table</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="pos-cart-items" id="posCartItems">
+                <div class="empty-state">
+                  <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <circle cx="9" cy="21" r="1" />
+                    <circle cx="20" cy="21" r="1" />
+                    <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
+                  </svg>
+                  <p>No items added yet</p>
+                </div>
+              </div>
+
+              <div class="pos-cart-summary" id="posCartSummary" style="display:none"></div>
+
+              <div class="pos-cart-actions">
+                <button class="btn btn-primary" onclick="POS.placeOrder()" id="posPlaceOrderBtn" disabled>
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                  Place Order
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- KITCHEN -->
+        <div class="page-view" id="page-kitchen">
+          <div class="kitchen-pipeline" id="kitchenPipeline">
+            <div class="pipeline-column">
+              <div class="pipeline-header">
+                <h3><span style="color:var(--warning)">●</span> Pending <span class="count" id="pendingCount">0</span></h3>
+              </div>
+              <div class="pipeline-body" id="pipelinePending"></div>
+            </div>
+
+            <div class="pipeline-column">
+              <div class="pipeline-header">
+                <h3><span style="color:var(--info)">●</span> In Progress <span class="count" id="inProgressCount">0</span></h3>
+              </div>
+              <div class="pipeline-body" id="pipelineInProgress"></div>
+            </div>
+
+            <div class="pipeline-column">
+              <div class="pipeline-header">
+                <h3><span style="color:var(--success)">●</span> Completed <span class="count" id="completedCount">0</span></h3>
+              </div>
+              <div class="pipeline-body" id="pipelineCompleted"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- INVENTORY -->
+        <div class="page-view" id="page-inventory">
+          <div class="filters-bar">
+            <div class="search-input">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input type="text" placeholder="Search inventory..." id="inventorySearchInput" oninput="Inventory.filter()">
+            </div>
+
+            <div class="filter-chips">
+              <div class="filter-chip active" data-filter="all" onclick="Inventory.setFilter('all',this)">All</div>
+              <div class="filter-chip" data-filter="low" onclick="Inventory.setFilter('low',this)">Low Stock</div>
+              <div class="filter-chip" data-filter="out" onclick="Inventory.setFilter('out',this)">Out of Stock</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="inventory-table-wrap">
+              <table class="data-table" id="inventoryTable">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- STAFF (UPDATED) -->
+        <div class="page-view" id="page-staff">
+          <div class="filters-bar" style="justify-content:space-between;align-items:flex-end">
+            <div>
+              <h3 style="font-size:1rem;font-weight:800">Staff Payroll</h3>
+              <p style="font-size:0.8rem;color:var(--text-muted)">
+                Select a salary month → track payable/paid/due → print receipts as proof
+              </p>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+              <input class="form-input" id="staffSearchInput" placeholder="Search staff..." style="width:260px" oninput="StaffPage.renderTable()">
+              <input class="form-input" type="month" id="payrollMonthInput" onchange="StaffPage.setPayrollMonth(this.value)" style="width:auto">
+              <button class="btn btn-secondary" onclick="StaffPage.load()">Refresh</button>
+              <button class="btn btn-primary" onclick="StaffPage.openAddModal()">Add Staff</button>
+            </div>
+          </div>
+
+          <div class="staff-chip-group" style="margin-bottom:14px">
+            <button class="staff-chip active" id="staffFilterAll" onclick="StaffPage.setPayrollFilter('all')">All</button>
+            <button class="staff-chip" id="staffFilterDue" onclick="StaffPage.setPayrollFilter('due')">Due</button>
+            <button class="staff-chip" id="staffFilterPaid" onclick="StaffPage.setPayrollFilter('paid')">Paid</button>
+          </div>
+
+          <div class="card">
+            <div id="staffSummary" style="margin-bottom:16px"></div>
+
+            <div class="inventory-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Staff</th>
+                    <th>Role</th>
+                    <th>Status (Today)</th>
+                    <th>Phone</th>
+                    <th>Join Date</th>
+                    <th>Monthly Salary</th>
+                    <th>Attendance (Selected Month)</th>
+                    <th>Payroll (Selected Month)</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="staffBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANALYTICS -->
+        <div class="page-view" id="page-analytics">
+          <div class="stats-grid" id="analyticsStats"></div>
+
+          <div class="reports-grid">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title" id="analyticsChartTitle">This Week</div>
+                  <div class="card-subtitle" id="analyticsChartSubtitle">Daily sales for selected week</div>
+                </div>
+                <div id="analyticsChartControls"></div>
+              </div>
+              <div class="chart-canvas-wrap"><canvas id="dailySalesChart" height="220"></canvas></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Top Selling Items</div>
+              </div>
+              <div id="topSellingItems"></div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-header">
+              <div class="card-title">Customer Feedback</div>
+              <button class="btn btn-secondary btn-sm" onclick="Analytics.addFeedback()">+ Add Feedback</button>
+            </div>
+            <div id="feedbackList"></div>
+          </div>
+        </div>
+
+        <!-- BILLING -->
+        <div class="page-view" id="page-billing">
+          <div class="filters-bar">
+            <div class="search-input">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input type="text" placeholder="Search orders..." id="billingSearchInput" oninput="Billing.filter()">
+            </div>
+
+            <select class="form-select" id="billingStatusFilter" style="width:auto" onchange="Billing.filter()">
+              <option value="all">All Status</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+
+          <div class="card">
+            <div class="inventory-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Order ID</th>
+                    <th>Table</th>
+                    <th>Type</th>
+                    <th>Customer</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="billingBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- SYNC CENTER -->
+        <div class="page-view" id="page-sync">
+          <div class="filters-bar" style="justify-content:space-between;align-items:center">
+            <div>
+              <h3 style="font-size:1rem;font-weight:700">Offline Sync Queue</h3>
+              <p style="font-size:0.8rem;color:var(--text-muted)">Manage queued offline actions and sync conflicts</p>
+            </div>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-secondary" onclick="SyncCenter.refresh()">Refresh</button>
+              <button class="btn btn-primary" onclick="SyncCenter.retryAll()">Retry All</button>
+              <button class="btn btn-danger" onclick="SyncCenter.clearAll()">Clear All</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div id="syncSummary" style="margin-bottom:16px"></div>
+            <div id="syncQueueList"></div>
+          </div>
+
+          <div style="margin-top: 24px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+            <button id="installPwaBtn" style="display:none" class="btn btn-primary" onclick="installPWA()">Install</button>
+            <button id="androidInstallBtn" style="display:none" class="btn btn-primary" onclick="confirmAndroidInstall()">Install on Android</button>
+            <button id="iosInstallHintBtn" style="display:none" class="btn btn-secondary" onclick="showIosInstallInstructions()">Install on iPhone/iPad</button>
+          </div> 
+          
+   
+        </div>
+        <div class="page-view" id="page-security"></div>
+
+      </div>
+
+      <!-- SCRIPTS -->
+      <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+      <script src="js/config.js"></script>
+      <script src="js/store.js"></script>
+      <script src="js/chartLib.js"></script>
+
+      <script src="js/modules/dashboard.js"></script>
+      <script src="js/modules/menuEngine.js"></script>
+      <script src="js/modules/floorMap.js"></script>
+      <script src="js/modules/pos.js"></script>
+      <script src="js/modules/publicHome.js"></script>
+      <script src="js/modules/kitchen.js"></script>
+      <script src="js/modules/inventory.js"></script>
+      <script src="js/modules/analytics.js"></script>
+      <script src="js/modules/billing.js"></script>
+      <script src="js/modules/staff.js"></script>
+
+      <!-- ✅ NEW: PROFILE MODULE -->
+      <script src="js/modules/profile.js"></script>
+
+      <script src="js/modules/syncCenter.js"></script>
+      <script src="js/modules/security.js"></script>
+
+      <script src="js/app.js"></script>
+      <script src="js/main.js"></script>
+    </main>
+  </div>
+</body>
+</html>

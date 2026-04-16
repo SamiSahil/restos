@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RestOS</string>
+    <string name="title_activity_main">RestOS</string>
+    <string name="package_name">com.restos.app</string>
+    <string name="custom_url_scheme">com.restos.app</string>
+</resources>
