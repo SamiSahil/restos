@@ -1,5 +1,6 @@
 import Setting from "../models/Setting.js";
 import { getIO } from "../config/socket.js";
+import { auditAction } from "../utils/audit.js";
 
 export const getSettings = async (req, res, next) => {
   try {
@@ -21,7 +22,6 @@ export const updateDiscountSetting = async (req, res, next) => {
     let { discountPercent } = req.body;
 
     discountPercent = Number(discountPercent || 0);
-
     if (discountPercent < 0) discountPercent = 0;
     if (discountPercent > 100) discountPercent = 100;
 
@@ -31,27 +31,19 @@ export const updateDiscountSetting = async (req, res, next) => {
       { new: true, upsert: true }
     );
 
+    // ✅ Audit: discount updated
+    await auditAction(req, "discount_setting_updated", {
+      discountPercent: Number(setting.value || 0)
+    });
+
     const io = getIO();
 
-    io.emit("settings:updated", {
-      discountPercent: Number(setting.value || 0)
-    });
+    io.emit("settings:updated", { discountPercent: Number(setting.value || 0) });
+    io.to("public").emit("settings:updated", { discountPercent: Number(setting.value || 0) });
 
-    io.to("public").emit("settings:updated", {
-      discountPercent: Number(setting.value || 0)
-    });
-
-    io.to("role:admin").emit("settings:updated", {
-      discountPercent: Number(setting.value || 0)
-    });
-
-    io.to("role:manager").emit("settings:updated", {
-      discountPercent: Number(setting.value || 0)
-    });
-
-    io.to("role:cashier").emit("settings:updated", {
-      discountPercent: Number(setting.value || 0)
-    });
+    io.to("role:admin").emit("settings:updated", { discountPercent: Number(setting.value || 0) });
+    io.to("role:manager").emit("settings:updated", { discountPercent: Number(setting.value || 0) });
+    io.to("role:cashier").emit("settings:updated", { discountPercent: Number(setting.value || 0) });
 
     res.json({
       success: true,

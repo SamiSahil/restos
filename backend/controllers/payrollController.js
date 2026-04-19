@@ -1,5 +1,6 @@
 import Staff from "../models/Staff.js";
 import SalaryPayment from "../models/SalaryPayment.js";
+import { auditAction } from "../utils/audit.js";
 
 function requireMonth(month) {
   if (!month || !/^\d{4}-\d{2}$/.test(month)) {
@@ -14,14 +15,6 @@ function money(n) {
   return Number((Number(n || 0)).toFixed(2));
 }
 
-/**
- * New payroll rule:
- * - active = 1.0 day pay
- * - on-leave = 0.5 day pay
- * - inactive/missing = 0 day pay
- *
- * paidEquivalentDays can be decimal (keep decimals)
- */
 function countAttendanceForMonth(staff, month) {
   const joinDateStr = staff.joinDate
     ? new Date(staff.joinDate).toISOString().slice(0, 10)
@@ -37,17 +30,9 @@ function countAttendanceForMonth(staff, month) {
   const paidEquivalentDays = presentDays + leaveDays * 0.5;
 
   const workingDays = Math.max(1, Number(staff.workingDays || 30));
-
-  // Unpaid portion in "day-equivalents"
   const unpaidEquivalentDays = Math.max(workingDays - paidEquivalentDays, 0);
 
-  return {
-    workingDays,
-    presentDays,
-    leaveDays,
-    paidEquivalentDays,
-    unpaidEquivalentDays
-  };
+  return { workingDays, presentDays, leaveDays, paidEquivalentDays, unpaidEquivalentDays };
 }
 
 function calcPayable(monthlySalary, workingDays, paidEquivalentDays) {
@@ -150,7 +135,6 @@ export const createPayrollPayment = async (req, res, next) => {
       throw new Error("Staff not found");
     }
 
-    // Recalculate payable/due at payment time (strong proof)
     const counts = countAttendanceForMonth(staff, safeMonth);
     const monthlySalary = Number(staff.monthlySalary || 0);
     const payableAmount = calcPayable(monthlySalary, counts.workingDays, counts.paidEquivalentDays);
@@ -195,6 +179,15 @@ export const createPayrollPayment = async (req, res, next) => {
       }
     });
 
+    // ✅ Audit: payroll payment created
+    await auditAction(req, "payroll_payment_created", {
+      paymentId: payment._id,
+      staffId: staff._id,
+      month: safeMonth,
+      amount: money(payAmount),
+      receiptNumber: payment.receiptNumber
+    });
+
     const populated = await SalaryPayment.findById(payment._id)
       .populate("staff", "fullName role phone")
       .populate("paidBy", "fullName role");
@@ -209,7 +202,6 @@ export const createPayrollPayment = async (req, res, next) => {
   }
 };
 
-// GET /api/payroll/summary/me?month=YYYY-MM
 export const getMyPayrollSummary = async (req, res, next) => {
   try {
     const month = requireMonth(req.query.month);
@@ -222,7 +214,6 @@ export const getMyPayrollSummary = async (req, res, next) => {
 
     const counts = countAttendanceForMonth(staff, month);
     const monthlySalary = Number(staff.monthlySalary || 0);
-
     const payableAmount = calcPayable(monthlySalary, counts.workingDays, counts.paidEquivalentDays);
 
     const paidBeforeAgg = await SalaryPayment.aggregate([
@@ -250,7 +241,6 @@ export const getMyPayrollSummary = async (req, res, next) => {
   }
 };
 
-// GET /api/payroll/payments/me?month=YYYY-MM
 export const getMyPayrollPayments = async (req, res, next) => {
   try {
     const month = requireMonth(req.query.month);

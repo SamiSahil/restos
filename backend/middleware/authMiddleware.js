@@ -33,6 +33,24 @@ export const protect = async (req, res, next) => {
   }
 };
 
+export const optionalProtect = async (req, res, next) => {
+  try {
+    const auth = req.headers.authorization || "";
+    if (!auth.startsWith("Bearer ")) return next();
+
+    const token = auth.split(" ")[1];
+    if (!token) return next();
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const staff = await Staff.findById(decoded.id).select("-password");
+    if (staff) req.staff = staff;
+
+    return next();
+  } catch {
+    return next();
+  }
+};
+
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.staff || !roles.includes(req.staff.role)) {

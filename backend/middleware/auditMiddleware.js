@@ -6,11 +6,15 @@ export const auditRequests = (req, res, next) => {
 
   res.on("finish", async () => {
     try {
-      // ✅ Only log API requests (skip /, /sw.js, icons, etc.)
       if (!req.originalUrl.startsWith("/api")) return;
 
       const staff = req.staff || null;
       const ip = getClientIp(req);
+
+      const extraMeta =
+        res.locals.auditMeta && typeof res.locals.auditMeta === "object"
+          ? res.locals.auditMeta
+          : {};
 
       await AuditLog.create({
         at: new Date(),
@@ -22,8 +26,10 @@ export const auditRequests = (req, res, next) => {
         referrer: req.headers["referer"] || "",
         staffId: staff?._id || null,
         staffRole: staff?.role || "",
+        action: String(res.locals.auditAction || ""),
         meta: {
-          durationMs: Date.now() - start
+          durationMs: Date.now() - start,
+          ...extraMeta
         }
       });
     } catch (err) {

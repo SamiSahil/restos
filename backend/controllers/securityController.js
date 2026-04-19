@@ -6,6 +6,8 @@ export const getAuditLogs = async (req, res, next) => {
   try {
     const { ip, action, staffId, statusCode, path, limit = 100 } = req.query;
 
+    const includeUA = String(req.query.includeUA || "true") === "true";
+
     const filter = {};
     if (ip) filter.ip = String(ip).trim();
     if (action) filter.action = String(action).trim();
@@ -15,7 +17,11 @@ export const getAuditLogs = async (req, res, next) => {
 
     const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
 
+    const baseFields = "at ip method path statusCode staffId staffRole action";
+    const fields = includeUA ? `${baseFields} userAgent` : baseFields;
+
     const logs = await AuditLog.find(filter)
+      .select(fields)
       .sort({ at: -1 })
       .limit(safeLimit)
       .lean();
@@ -104,7 +110,6 @@ export const getTopAbusiveIPs = async (req, res, next) => {
           lastStatusCode: { $first: "$statusCode" }
         }
       },
-
       { $sort: { bad: -1, total: -1 } },
       { $limit: 10 }
     ]);

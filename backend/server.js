@@ -9,6 +9,9 @@ import compression from "compression";
 import helmet from "helmet";
 import { Server } from "socket.io";
 
+import jwt from "jsonwebtoken";
+import Staff from "./models/Staff.js";
+
 import connectDB from "./config/db.js";
 import { setIO } from "./config/socket.js";
 import securityRoutes from "./routes/securityRoutes.js";
@@ -44,8 +47,7 @@ const allowedOrigins = [
   // Capacitor shells
   "capacitor://localhost",
   "ionic://localhost",
-  "http://localhost",
-
+  "http://localhost"
 ].filter(Boolean);
 
 const io = new Server(server, {
@@ -57,29 +59,67 @@ const io = new Server(server, {
 
 setIO(io);
 
+// ✅ Socket Authentication Middleware (JWT)
+io.use(async (socket, next) => {
+  try {
+    const token =
+      socket.handshake.auth?.token ||
+      (socket.handshake.headers?.authorization || "").replace(/^Bearer\s+/i, "");
+
+    // Public socket allowed
+    if (!token) {
+      socket.staff = null;
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const staff = await Staff.findById(decoded.id).select("-password");
+    if (!staff) return next(new Error("Unauthorized socket: staff not found"));
+
+    socket.staff = staff;
+    return next();
+  } catch {
+    return next(new Error("Unauthorized socket: invalid token"));
+  }
+});
+
 io.on("connection", (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
 
+  // ✅ Server decides room membership
+  if (socket.staff?.role) {
+    socket.join(`role:${socket.staff.role}`);
+    console.log(
+      `👤 Socket ${socket.id} authed as ${socket.staff.role} joined room role:${socket.staff.role}`
+    );
+  } else {
+    socket.join("public");
+    console.log(`🌐 Socket ${socket.id} joined room public`);
+  }
+
+  // Optional: keep but enforce
   socket.on("join:role", ({ role }) => {
-    if (role) {
-      socket.join(`role:${role}`);
-      console.log(`👤 Socket ${socket.id} joined room role:${role}`);
-    }
+    if (socket.staff?.role && role === socket.staff.role) socket.join(`role:${role}`);
   });
 
   socket.on("join:public", () => {
-    socket.join("public");
-    console.log(`🌐 Socket ${socket.id} joined room public`);
+    if (!socket.staff) socket.join("public");
   });
 
   socket.on("disconnect", () => {
     console.log(`❌ Socket disconnected: ${socket.id}`);
   });
 });
+
 app.set("trust proxy", 1);
+
+// ✅ Blockers first
 app.use(ipBlocker);
 app.use(autoBlocker);
+
+// ✅ Audit once (IMPORTANT: do NOT mount twice)
 app.use(auditRequests);
+
 app.use(
   helmet({
     crossOriginResourcePolicy: false
@@ -91,10 +131,8 @@ app.use(compression());
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin) return callback(null, true); 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error("Not allowed by CORS"));
     },
     credentials: true
@@ -116,6 +154,7 @@ app.get("/", (req, res) => {
     message: "RestaurantOS API is running"
   });
 });
+
 app.use("/api/security", securityRoutes);
 app.use("/api/menu", menuRoutes);
 app.use("/api/tables", tableRoutes);
@@ -127,12 +166,14 @@ app.use("/api/staff", staffRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/payroll", payrollRoutes);
 app.use("/api/settings", settingsRoutes);
+
 app.use(notFound);
 app.use(errorHandler);
-app.use(auditRequests);
 
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port http://localhost:${PORT}`);
+  console.log(
+    `Server running in ${process.env.NODE_ENV} mode on port http://localhost:${PORT}`
+  );
 });

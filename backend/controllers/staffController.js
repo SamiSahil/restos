@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import streamifier from "streamifier";
 import Staff from "../models/Staff.js";
 import cloudinary from "../config/cloudinary.js";
+import { auditAction } from "../utils/audit.js";
 
 const uploadBufferToCloudinary = (buffer, folder) => {
   return new Promise((resolve, reject) => {
@@ -27,7 +28,6 @@ const uploadBufferToCloudinary = (buffer, folder) => {
 const sanitizeStaffFields = (body) => {
   const monthlySalary = Math.max(0, Number(body.monthlySalary || 0));
   const workingDays = Math.max(1, Number(body.workingDays || 30));
-
   return { monthlySalary, workingDays };
 };
 
@@ -64,17 +64,10 @@ export const getStaffList = async (req, res, next) => {
 
     const enriched = staff.map((person) => {
       const counts = countMonthlyAttendance(person);
-      return {
-        ...person.toObject(),
-        ...counts
-      };
+      return { ...person.toObject(), ...counts };
     });
 
-    res.json({
-      success: true,
-      count: enriched.length,
-      data: enriched
-    });
+    res.json({ success: true, count: enriched.length, data: enriched });
   } catch (error) {
     next(error);
   }
@@ -91,13 +84,7 @@ export const getStaffById = async (req, res, next) => {
 
     const counts = countMonthlyAttendance(staff);
 
-    res.json({
-      success: true,
-      data: {
-        ...staff.toObject(),
-        ...counts
-      }
-    });
+    res.json({ success: true, data: { ...staff.toObject(), ...counts } });
   } catch (error) {
     next(error);
   }
@@ -130,11 +117,9 @@ export const createStaff = async (req, res, next) => {
       throw new Error("A staff member with this email already exists");
     }
 
-    // Multer fields: req.files.photo?.[0], req.files.nidImage?.[0]
     const photoFile = req.files?.photo?.[0] || null;
     const nidFile = req.files?.nidImage?.[0] || null;
 
-    // Upload profile photo if provided
     let photoUrl = "";
     let photoPublicId = "";
     if (photoFile) {
@@ -143,7 +128,6 @@ export const createStaff = async (req, res, next) => {
       photoPublicId = uploadedPhoto.public_id;
     }
 
-    // Upload NID image if provided
     let nidImageUrl = "";
     let nidImagePublicId = "";
     if (nidFile) {
@@ -179,16 +163,21 @@ export const createStaff = async (req, res, next) => {
       leaveEndDate: leaveEndDate || null
     });
 
+    // ✅ Audit: staff created
+    await auditAction(req, "staff_created", {
+      staffId: staff._id,
+      email: staff.email,
+      role: staff.role,
+      status: staff.status
+    });
+
     const safeStaff = await Staff.findById(staff._id).select("-password");
     const counts = countMonthlyAttendance(safeStaff);
 
     res.status(201).json({
       success: true,
       message: "Staff created successfully",
-      data: {
-        ...safeStaff.toObject(),
-        ...counts
-      }
+      data: { ...safeStaff.toObject(), ...counts }
     });
   } catch (error) {
     next(error);
@@ -207,7 +196,6 @@ export const updateStaff = async (req, res, next) => {
     const photoFile = req.files?.photo?.[0] || null;
     const nidFile = req.files?.nidImage?.[0] || null;
 
-    // Handle photo replacement
     let photoUrl = staff.photoUrl;
     let photoPublicId = staff.photoPublicId;
 
@@ -220,7 +208,6 @@ export const updateStaff = async (req, res, next) => {
       photoPublicId = uploadedPhoto.public_id;
     }
 
-    // Handle NID replacement
     let nidImageUrl = staff.nidImageUrl;
     let nidImagePublicId = staff.nidImagePublicId;
 
@@ -233,7 +220,6 @@ export const updateStaff = async (req, res, next) => {
       nidImagePublicId = uploadedNid.public_id;
     }
 
-    // Password update optional
     if (req.body.password && req.body.password.trim()) {
       req.body.password = await bcrypt.hash(req.body.password, 10);
     } else {
@@ -248,25 +234,27 @@ export const updateStaff = async (req, res, next) => {
         ...req.body,
         monthlySalary: safeFields.monthlySalary,
         workingDays: safeFields.workingDays,
-
         photoUrl,
         photoPublicId,
-
         nidImageUrl,
         nidImagePublicId
       },
       { new: true, runValidators: true }
     ).select("-password");
 
+    // ✅ Audit: staff updated
+    await auditAction(req, "staff_updated", {
+      staffId: updated._id,
+      role: updated.role,
+      status: updated.status
+    });
+
     const counts = countMonthlyAttendance(updated);
 
     res.json({
       success: true,
       message: "Staff updated successfully",
-      data: {
-        ...updated.toObject(),
-        ...counts
-      }
+      data: { ...updated.toObject(), ...counts }
     });
   } catch (error) {
     next(error);
@@ -296,14 +284,18 @@ export const updateStaffAttendance = async (req, res, next) => {
     if (existingIndex >= 0) {
       staff.attendance[existingIndex].status = status;
     } else {
-      staff.attendance.push({
-        date: targetDate,
-        status
-      });
+      staff.attendance.push({ date: targetDate, status });
     }
 
     staff.status = status;
     await staff.save();
+
+    // ✅ Audit: attendance updated
+    await auditAction(req, "staff_attendance_updated", {
+      staffId: staff._id,
+      date: targetDate,
+      status
+    });
 
     const safeStaff = await Staff.findById(staff._id).select("-password");
     const counts = countMonthlyAttendance(safeStaff);
@@ -311,10 +303,7 @@ export const updateStaffAttendance = async (req, res, next) => {
     res.json({
       success: true,
       message: "Attendance updated successfully",
-      data: {
-        ...safeStaff.toObject(),
-        ...counts
-      }
+      data: { ...safeStaff.toObject(), ...counts }
     });
   } catch (error) {
     next(error);
@@ -330,22 +319,24 @@ export const deleteStaff = async (req, res, next) => {
       throw new Error("Staff not found");
     }
 
-    // delete profile photo
     if (staff.photoPublicId) {
       await cloudinary.uploader.destroy(staff.photoPublicId);
     }
 
-    // delete NID image
     if (staff.nidImagePublicId) {
       await cloudinary.uploader.destroy(staff.nidImagePublicId);
     }
 
     await staff.deleteOne();
 
-    res.json({
-      success: true,
-      message: "Staff deleted successfully"
+    // ✅ Audit: staff deleted
+    await auditAction(req, "staff_deleted", {
+      staffId: staff._id,
+      email: staff.email,
+      role: staff.role
     });
+
+    res.json({ success: true, message: "Staff deleted successfully" });
   } catch (error) {
     next(error);
   }

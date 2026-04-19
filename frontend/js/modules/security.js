@@ -5,11 +5,12 @@ const Security = {
     topAbuse: [],
     loading: false,
     filters: {
-      ip: '',
-      action: '',
-      statusCode: '',
-      path: '',
-      limit: 200
+      ip: "",
+      action: "",
+      statusCode: "",
+      path: "",
+      limit: 200,
+      includeUA: false // ✅ NEW
     }
   },
 
@@ -20,49 +21,46 @@ const Security = {
   },
 
   canAccess() {
-    const u = Store.get('authUser');
-    return u && (u.role === 'admin' || u.role === 'manager');
+    const u = Store.get("authUser");
+    return u && (u.role === "admin" || u.role === "manager");
   },
 
-  // ----------------------------
-  // Event delegation (NO inline onclick)
-  // ----------------------------
   bindEvents() {
     if (this._bound) return;
-    const root = this.byId('page-security');
+    const root = this.byId("page-security");
     if (!root) return;
 
-    root.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-sec-action]');
+    root.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-sec-action]");
       if (!btn) return;
 
-      const action = btn.getAttribute('data-sec-action');
-      const ip = btn.getAttribute('data-ip') || '';
+      const action = btn.getAttribute("data-sec-action");
+      const ip = btn.getAttribute("data-ip") || "";
 
-      if (action === 'refresh') return this.refresh();
-      if (action === 'apply') return this.applyFilters();
-      if (action === 'downloadCsv') return this.downloadCsv();
-      if (action === 'openBlockModal') return this.openBlockModal();
-      if (action === 'quickFilterIp') return this.quickFilterIp(ip);
-      if (action === 'prefillBlock') return this.openBlockModalPrefill(ip);
-      if (action === 'unblockPrompt') return this.unblockIP(ip);
+      if (action === "refresh") return this.refresh();
+      if (action === "apply") return this.applyFilters();
+      if (action === "downloadCsv") return this.downloadCsv();
+      if (action === "openBlockModal") return this.openBlockModal();
+      if (action === "quickFilterIp") return this.quickFilterIp(ip);
+      if (action === "prefillBlock") return this.openBlockModalPrefill(ip);
+      if (action === "unblockPrompt") return this.unblockIP(ip);
     });
 
     this._bound = true;
   },
 
-  // ----------------------------
-  // Fetchers
-  // ----------------------------
   async fetchLogs() {
     const f = this.state.filters;
     const qs = new URLSearchParams();
 
-    if (f.ip) qs.set('ip', f.ip);
-    if (f.action) qs.set('action', f.action);
-    if (f.statusCode) qs.set('statusCode', f.statusCode);
-    if (f.path) qs.set('path', f.path);
-    qs.set('limit', String(f.limit || 200));
+    if (f.ip) qs.set("ip", f.ip);
+    if (f.action) qs.set("action", f.action);
+    if (f.statusCode) qs.set("statusCode", f.statusCode);
+    if (f.path) qs.set("path", f.path);
+    qs.set("limit", String(f.limit || 200));
+
+    // ✅ Only include UA when user explicitly requests it
+    if (f.includeUA) qs.set("includeUA", "true");
 
     const json = await Store.request(`/security/logs?${qs.toString()}`);
     this.state.logs = json.data || [];
@@ -74,7 +72,7 @@ const Security = {
   },
 
   async fetchBlocked() {
-    const json = await Store.request('/security/blocked-ips');
+    const json = await Store.request("/security/blocked-ips");
     this.state.blocked = json.data || [];
   },
 
@@ -88,27 +86,23 @@ const Security = {
       await Promise.all([this.fetchLogs(), this.fetchBlocked(), this.fetchTopAbuse(60)]);
       this.render();
     } catch (e) {
-      App.toast(e.message || 'Failed to load security data', 'error');
+      App.toast(e.message || "Failed to load security data", "error");
       this.render();
     } finally {
       this.state.loading = false;
     }
   },
 
-  // ----------------------------
-  // Render
-  // ----------------------------
   renderSkeleton() {
-    const page = this.byId('page-security');
+    const page = this.byId("page-security");
     if (!page) return;
     page.innerHTML = `<div class="empty-state"><p>Loading security logs...</p></div>`;
   },
 
   render() {
-    const page = this.byId('page-security');
+    const page = this.byId("page-security");
     if (!page) return;
 
-    // ensure event delegation is attached once
     this.bindEvents();
 
     if (!this.canAccess()) {
@@ -129,19 +123,25 @@ const Security = {
 
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
           <input class="form-input" style="width:180px" id="secFilterIp" placeholder="Filter IP"
-                 value="${App.safeText(f.ip, '')}">
+                 value="${App.safeText(f.ip, "")}">
           <input class="form-input" style="width:160px" id="secFilterAction" placeholder="Action (optional)"
-                 value="${App.safeText(f.action, '')}">
+                 value="${App.safeText(f.action, "")}">
           <input class="form-input" style="width:120px" id="secFilterStatus" placeholder="Status (e.g. 403)"
-                 value="${App.safeText(f.statusCode, '')}">
+                 value="${App.safeText(f.statusCode, "")}">
           <input class="form-input" style="width:220px" id="secFilterPath" placeholder="Path contains"
-                 value="${App.safeText(f.path, '')}">
+                 value="${App.safeText(f.path, "")}">
 
           <select class="form-select" style="width:auto" id="secLimit">
             ${[50, 100, 200, 300, 500].map((n) => `
-              <option value="${n}" ${Number(f.limit) === n ? 'selected' : ''}>Last ${n}</option>
-            `).join('')}
+              <option value="${n}" ${Number(f.limit) === n ? "selected" : ""}>Last ${n}</option>
+            `).join("")}
           </select>
+
+          <!-- ✅ NEW -->
+          <label class="text-soft" style="display:flex;gap:8px;align-items:center">
+            <input type="checkbox" id="secIncludeUA" ${f.includeUA ? "checked" : ""}>
+            Include UA
+          </label>
 
           <button class="btn btn-secondary" data-sec-action="apply">Apply</button>
           <button class="btn btn-primary" data-sec-action="refresh">Refresh</button>
@@ -211,53 +211,49 @@ const Security = {
     return `
       <div class="modal-stack" style="gap:10px">
         ${list.map((x) => {
-          const ip = String(x._id || '');
+          const ip = String(x._id || "");
           return `
             <div class="panel-muted" style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
               <div>
-                <div style="font-weight:900">${App.safeText(ip || '-')}</div>
+                <div style="font-weight:900">${App.safeText(ip || "-")}</div>
                 <div class="text-soft">
                   Total: <strong>${Number(x.total || 0)}</strong> |
                   Bad (401/403/429): <strong style="color:var(--warning)">${Number(x.bad || 0)}</strong>
                 </div>
-                <div class="text-soft">Last seen: ${x.lastAt ? new Date(x.lastAt).toLocaleString() : '-'}</div>
+                <div class="text-soft">Last seen: ${x.lastAt ? new Date(x.lastAt).toLocaleString() : "-"}</div>
               </div>
               <div class="text-soft">
-  Device: <strong>${App.safeText(this.deviceLabelFromUA(x.lastUserAgent || ""))}</strong>
-</div>
+                Device: <strong>${App.safeText(this.deviceLabelFromUA(x.lastUserAgent || ""))}</strong>
+              </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn btn-secondary btn-xs" data-sec-action="quickFilterIp" data-ip="${App.escapeHTML(ip)}">View Logs</button>
                 <button class="btn btn-danger btn-xs" data-sec-action="prefillBlock" data-ip="${App.escapeHTML(ip)}">Block</button>
               </div>
             </div>
           `;
-        }).join('')}
+        }).join("")}
       </div>
     `;
   },
 
-deviceLabelFromUA(ua = "") {
-  const s = String(ua || "").toLowerCase();
-  if (!s) return "Unknown";
+  deviceLabelFromUA(ua = "") {
+    const s = String(ua || "").toLowerCase();
+    if (!s) return "Unknown";
+    if (/(bot|crawl|spider|slurp|scanner|monitor|uptime)/i.test(s)) return "Bot/Scanner";
 
-  // bots/scanners
-  if (/(bot|crawl|spider|slurp|scanner|monitor|uptime)/i.test(s)) {
-    return "Bot/Scanner";
-  }
+    const isTablet = /(ipad|tablet)/i.test(s);
+    const isMobile = !isTablet && /(iphone|ipod|android|mobile)/i.test(s);
 
-  const isTablet = /(ipad|tablet)/i.test(s);
-  const isMobile = !isTablet && /(iphone|ipod|android|mobile)/i.test(s);
+    let os = "";
+    if (/android/i.test(s)) os = "Android";
+    else if (/(iphone|ipad|ipod)/i.test(s)) os = "iOS";
+    else if (/windows nt/i.test(s)) os = "Windows";
+    else if (/(macintosh|mac os x)/i.test(s)) os = "macOS";
+    else if (/linux/i.test(s)) os = "Linux";
 
-  let os = "";
-  if (/android/i.test(s)) os = "Android";
-  else if (/(iphone|ipad|ipod)/i.test(s)) os = "iOS";
-  else if (/windows nt/i.test(s)) os = "Windows";
-  else if (/(macintosh|mac os x)/i.test(s)) os = "macOS";
-  else if (/linux/i.test(s)) os = "Linux";
-
-  const device = isTablet ? "Tablet" : isMobile ? "Mobile" : "Desktop";
-  return os ? `${device} (${os})` : device;
-},
+    const device = isTablet ? "Tablet" : isMobile ? "Mobile" : "Desktop";
+    return os ? `${device} (${os})` : device;
+  },
 
   renderBlockedList() {
     if (!this.state.blocked.length) return `<div class="panel-muted">No blocked IPs</div>`;
@@ -265,18 +261,18 @@ deviceLabelFromUA(ua = "") {
     return `
       <div class="modal-stack" style="gap:10px">
         ${this.state.blocked.map((b) => {
-          const ip = String(b.ip || '');
+          const ip = String(b.ip || "");
           return `
             <div class="panel-muted" style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap">
               <div>
                 <div style="font-weight:900">${App.safeText(ip)}</div>
-                <div class="text-soft">${b.reason ? `Reason: ${App.safeText(b.reason)}` : 'No reason'}</div>
-                <div class="text-soft">Blocked at: ${b.blockedAt ? new Date(b.blockedAt).toLocaleString() : '-'}</div>
+                <div class="text-soft">${b.reason ? `Reason: ${App.safeText(b.reason)}` : "No reason"}</div>
+                <div class="text-soft">Blocked at: ${b.blockedAt ? new Date(b.blockedAt).toLocaleString() : "-"}</div>
               </div>
               <button class="btn btn-secondary btn-xs" data-sec-action="unblockPrompt" data-ip="${App.escapeHTML(ip)}">Unblock</button>
             </div>
           `;
-        }).join('')}
+        }).join("")}
       </div>
     `;
   },
@@ -288,44 +284,45 @@ deviceLabelFromUA(ua = "") {
 
     const badge = (statusCode) => {
       const s = Number(statusCode || 0);
-      const cls = s >= 500 ? 'badge-danger' : s >= 400 ? 'badge-warning' : 'badge-success';
-      return `<span class="badge ${cls}">${App.safeText(String(s || ''))}</span>`;
+      const cls = s >= 500 ? "badge-danger" : s >= 400 ? "badge-warning" : "badge-success";
+      return `<span class="badge ${cls}">${App.safeText(String(s || ""))}</span>`;
     };
 
     return this.state.logs.map((l) => {
-      const ip = String(l.ip || '');
-      const staff = l.staffId ? `${l.staffRole || 'staff'}` : '—';
-      const action = l.action || '—';
-      const ua = (l.userAgent || '').slice(0, 45);
+      const ip = String(l.ip || "");
+      const staff = l.staffId ? `${l.staffRole || "staff"}` : "—";
+      const action = l.action || "—";
+
+      // If backend didn't include UA (includeUA=false), this will be empty
+      const uaFull = String(l.userAgent || "");
+      const uaShort = uaFull.slice(0, 45);
 
       return `
         <tr>
-          <td>${l.at ? new Date(l.at).toLocaleString() : '-'}</td>
+          <td>${l.at ? new Date(l.at).toLocaleString() : "-"}</td>
           <td>
             <button class="btn btn-secondary btn-xs" data-sec-action="quickFilterIp" data-ip="${App.escapeHTML(ip)}">
-              ${App.safeText(ip || '-')}
+              ${App.safeText(ip || "-")}
             </button>
           </td>
-          <td>${App.safeText(l.method || '-')}</td>
-          <td style="max-width:320px;word-break:break-all">${App.safeText(l.path || '-')}</td>
+          <td>${App.safeText(l.method || "-")}</td>
+          <td style="max-width:320px;word-break:break-all">${App.safeText(l.path || "-")}</td>
           <td>${badge(l.statusCode)}</td>
           <td>${App.safeText(staff)}</td>
           <td>${App.safeText(action)}</td>
-          <td title="${App.safeText(l.userAgent || '')}">${App.safeText(ua || '-')}</td>
+          <td title="${App.safeText(uaFull)}">${App.safeText(uaShort || "-")}</td>
         </tr>
       `;
-    }).join('');
+    }).join("");
   },
 
-  // ----------------------------
-  // Filters
-  // ----------------------------
   applyFilters() {
-    this.state.filters.ip = (this.byId('secFilterIp')?.value || '').trim();
-    this.state.filters.action = (this.byId('secFilterAction')?.value || '').trim();
-    this.state.filters.statusCode = (this.byId('secFilterStatus')?.value || '').trim();
-    this.state.filters.path = (this.byId('secFilterPath')?.value || '').trim();
-    this.state.filters.limit = Number(this.byId('secLimit')?.value || 200);
+    this.state.filters.ip = (this.byId("secFilterIp")?.value || "").trim();
+    this.state.filters.action = (this.byId("secFilterAction")?.value || "").trim();
+    this.state.filters.statusCode = (this.byId("secFilterStatus")?.value || "").trim();
+    this.state.filters.path = (this.byId("secFilterPath")?.value || "").trim();
+    this.state.filters.limit = Number(this.byId("secLimit")?.value || 200);
+    this.state.filters.includeUA = !!this.byId("secIncludeUA")?.checked; // ✅ NEW
     this.refresh();
   },
 
@@ -336,12 +333,9 @@ deviceLabelFromUA(ua = "") {
     this.refresh();
   },
 
-  // ----------------------------
-  // Block / Unblock
-  // ----------------------------
   openBlockModal() {
     App.openModal(
-      'Block IP',
+      "Block IP",
       `
         <div class="form-group">
           <label class="form-label">IP Address</label>
@@ -362,125 +356,121 @@ deviceLabelFromUA(ua = "") {
   openBlockModalPrefill(ip) {
     this.openBlockModal();
     setTimeout(() => {
-      const input = this.byId('blockIpValue');
-      if (input) input.value = ip || '';
+      const input = this.byId("blockIpValue");
+      if (input) input.value = ip || "";
     }, 50);
   },
 
   async confirmBlockIP() {
-    const btn = this.byId('confirmBlockIpBtn');
-    const ip = (this.byId('blockIpValue')?.value || '').trim();
-    const reason = (this.byId('blockIpReason')?.value || '').trim();
+    const btn = this.byId("confirmBlockIpBtn");
+    const ip = (this.byId("blockIpValue")?.value || "").trim();
+    const reason = (this.byId("blockIpReason")?.value || "").trim();
 
-    if (!ip) return App.toast('IP is required', 'warning');
+    if (!ip) return App.toast("IP is required", "warning");
 
-    App.setButtonLoading(btn, true, 'Blocking...', 'Block');
+    App.setButtonLoading(btn, true, "Blocking...", "Block");
     try {
-      await Store.request('/security/block-ip', {
-        method: 'POST',
+      await Store.request("/security/block-ip", {
+        method: "POST",
         body: JSON.stringify({ ip, reason })
       });
 
-      App.toast('IP blocked', 'success');
+      App.toast("IP blocked", "success");
       App.closeModal();
       await this.refresh();
     } catch (e) {
-      App.toast(e.message || 'Failed to block IP', 'error');
+      App.toast(e.message || "Failed to block IP", "error");
     } finally {
-      App.setButtonLoading(btn, false, 'Blocking...', 'Block');
+      App.setButtonLoading(btn, false, "Blocking...", "Block");
     }
   },
 
-  // store the ip temporarily for the modal action
-_pendingUnblockIp: null,
+  _pendingUnblockIp: null,
 
-unblockIP(ip) {
-  if (!ip) return;
+  unblockIP(ip) {
+    if (!ip) return;
 
-  this._pendingUnblockIp = ip;
+    this._pendingUnblockIp = ip;
 
-  App.openModal(
-    'Unblock IP',
-    `<p class="text-muted">Unblock <strong>${App.safeText(ip)}</strong>?</p>`,
-    `
-      <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
-      <button class="btn btn-primary" id="confirmUnblockBtn" onclick="Security.confirmUnblockIP()">Unblock</button>
-    `
-  );
-},
+    App.openModal(
+      "Unblock IP",
+      `<p class="text-muted">Unblock <strong>${App.safeText(ip)}</strong>?</p>`,
+      `
+        <button class="btn btn-secondary" onclick="App.closeModal()">Cancel</button>
+        <button class="btn btn-primary" id="confirmUnblockBtn" onclick="Security.confirmUnblockIP()">Unblock</button>
+      `
+    );
+  },
 
-async confirmUnblockIP() {
-  const ip = this._pendingUnblockIp;
-  if (!ip) {
-    App.toast('No IP selected to unblock', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('confirmUnblockBtn');
-  App.setButtonLoading(btn, true, 'Unblocking...', 'Unblock');
-
-  try {
-    await Store.request(`/security/block-ip/${encodeURIComponent(ip)}`, { method: 'DELETE' });
-    App.closeModal();
-    App.toast('IP unblocked', 'success');
-    this._pendingUnblockIp = null;
-    await this.refresh();
-  } catch (e) {
-    App.toast(e.message || 'Failed to unblock IP', 'error');
-  } finally {
-    App.setButtonLoading(btn, false, 'Unblocking...', 'Unblock');
-  }
-},
-
-  // ----------------------------
-  // CSV Export
-  // ----------------------------
-  downloadCsv() {
-    const rows = this.state.logs || [];
-    if (!rows.length) {
-      App.toast('No logs to export', 'warning');
+  async confirmUnblockIP() {
+    const ip = this._pendingUnblockIp;
+    if (!ip) {
+      App.toast("No IP selected to unblock", "error");
       return;
     }
 
-    const header = ['at', 'ip', 'method', 'path', 'statusCode', 'staffId', 'staffRole', 'action', 'userAgent'];
+    const btn = document.getElementById("confirmUnblockBtn");
+    App.setButtonLoading(btn, true, "Unblocking...", "Unblock");
+
+    try {
+      await Store.request(`/security/block-ip/${encodeURIComponent(ip)}`, { method: "DELETE" });
+      App.closeModal();
+      App.toast("IP unblocked", "success");
+      this._pendingUnblockIp = null;
+      await this.refresh();
+    } catch (e) {
+      App.toast(e.message || "Failed to unblock IP", "error");
+    } finally {
+      App.setButtonLoading(btn, false, "Unblocking...", "Unblock");
+    }
+  },
+
+  downloadCsv() {
+    const rows = this.state.logs || [];
+    if (!rows.length) {
+      App.toast("No logs to export", "warning");
+      return;
+    }
+
+    const header = ["at", "ip", "method", "path", "statusCode", "staffId", "staffRole", "action", "userAgent"];
 
     const escape = (v) => {
-      const s = String(v ?? '');
-      if (s.includes('"') || s.includes(',') || s.includes('\n')) {
+      const s = String(v ?? "");
+      if (s.includes('"') || s.includes(",") || s.includes("\n")) {
         return `"${s.replace(/"/g, '""')}"`;
       }
       return s;
     };
 
     const csv = [
-      header.join(','),
+      header.join(","),
       ...rows.map((l) => {
         const line = [
-          l.at ? new Date(l.at).toISOString() : '',
-          l.ip || '',
-          l.method || '',
-          l.path || '',
-          l.statusCode ?? '',
-          l.staffId || '',
-          l.staffRole || '',
-          l.action || '',
-          l.userAgent || ''
+          l.at ? new Date(l.at).toISOString() : "",
+          l.ip || "",
+          l.method || "",
+          l.path || "",
+          l.statusCode ?? "",
+          l.staffId || "",
+          l.staffRole || "",
+          l.action || "",
+          l.userAgent || ""
         ];
-        return line.map(escape).join(',');
+        return line.map(escape).join(",");
       })
-    ].join('\n');
+    ].join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `audit_logs_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+    a.download = `audit_logs_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
 
     URL.revokeObjectURL(url);
-    App.toast('CSV downloaded', 'success');
+    App.toast("CSV downloaded", "success");
   }
 };

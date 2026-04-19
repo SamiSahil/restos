@@ -176,7 +176,10 @@ const Store = {
     const socketBase = API_BASE.replace('/api', '');
 
     this.socket = io(socketBase, {
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      auth: {
+        token: this._state.authToken || null
+      }
     });
 
     this.socket.on('connect', () => {
@@ -607,9 +610,10 @@ const Store = {
     this.set('feedback', [...localQueuedFeedback, ...backendFeedback]);
   },
 
-  // ✅ NEW: Public best-selling items
   async fetchTopItemsPublic(limit = 10, days = 30) {
-    const json = await this.request(`/analytics/top-items?limit=${encodeURIComponent(limit)}&days=${encodeURIComponent(days)}`);
+    const json = await this.request(
+      `/analytics/top-items?limit=${encodeURIComponent(limit)}&days=${encodeURIComponent(days)}`
+    );
     this.set('topItems', json.data || []);
   }
 };

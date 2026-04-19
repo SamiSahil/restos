@@ -9,12 +9,14 @@ import {
 } from "../controllers/feedbackController.js";
 
 import { protect, authorize } from "../middleware/authMiddleware.js";
+import { publicOrderLimiter } from "../middleware/rateLimiter.js";
 
 const router = express.Router();
 
-router.route("/")
+router
+  .route("/")
   .get(getFeedbacks)
-  .post(createFeedback);
+  .post(publicOrderLimiter, createFeedback);
 
 // NEW: hide/unhide (admin/manager)
 router.patch("/:id/hide", protect, authorize("admin", "manager"), setFeedbackHidden);
@@ -23,7 +25,8 @@ router.patch("/:id/hide", protect, authorize("admin", "manager"), setFeedbackHid
 router.delete("/:id", protect, authorize("admin", "manager"), deleteFeedback);
 
 // keep if you need these:
-router.route("/:id")
+router
+  .route("/:id")
   .get(getFeedbackById)
   .put(protect, authorize("admin", "manager"), updateFeedback);
 
